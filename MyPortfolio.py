@@ -4,28 +4,26 @@
 #     "marimo>=0.19.10",
 #     "pandas>=2.3.3",
 #     "plotly>=6.5.1",
-#     "pyarrow>=22.0.0",
-#     "pyzmq>=27.1.0",
 #     "numpy>=2.0.0",
 # ]
 # ///
 
+
+
+
 import marimo
+
+
+
 
 __generated_with = "0.19.11"
 app = marimo.App()
 
 
-@app.cell
-def _(mo):
-    mo.md(
-        r"""
----
-## 🎓 Personal Portfolio Webpage
-Combine everything learned so far (e.g., data loading, preparation, and visualization) into a multi-tabbed webpage featuring an interactive chart and dashboard.
-"""
-    )
-    return
+
+
+
+
 
 
 @app.cell
@@ -34,25 +32,73 @@ def _():
     import pandas as pd
     import plotly.express as px
     import numpy as np
-    return mo, np, pd, px
+    return mo, pd, px, np
+
+
+
+
+
+
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        """
+---
+## 🎓 Personal Portfolio Webpage
+
+
+
+
+Combine everything learned so far into a multi-tabbed webpage featuring an interactive chart and dashboard.
+"""
+    )
+
+
+
+
+
+
 
 
 @app.cell
 def _(pd):
-    csv_url = "https://gist.githubusercontent.com/DrAYim/80393243abdbb4bfe3b45fef58e8d3c8/raw/ed5cfd9f210bf80cb59a5f420bf8f2b88a9c2dcd/sp500_ZScore_AvgCostofDebt.csv"
+    df_final = pd.DataFrame(
+        {
+            "Name": [
+                "Apple", "Microsoft", "Amazon", "Google", "Tesla",
+                "Meta", "JPMorgan", "Coca-Cola", "Nike", "Intel"
+            ],
+            "Sector_Key": [
+                "Technology", "Technology", "Consumer", "Technology", "Automotive",
+                "Technology", "Finance", "Consumer", "Consumer", "Technology"
+            ],
+            "Z_Score_lag": [3.4, 3.8, 2.7, 3.5, 2.1, 3.0, 2.6, 3.2, 2.8, 2.3],
+            "AvgCost_of_Debt": [0.021, 0.018, 0.029, 0.022, 0.041, 0.027, 0.035, 0.024, 0.031, 0.038],
+            "Market_Cap_B": [2800, 3000, 1800, 2000, 800, 1200, 500, 260, 180, 170],
+        }
+    )
 
-    df_final = pd.read_csv(csv_url)
-    df_final = df_final.dropna(subset=["AvgCost_of_Debt", "Z_Score_lag", "Sector_Key"])
-    df_final = df_final[df_final["AvgCost_of_Debt"] < 5]
+
+
+
     df_final["Debt_Cost_Percent"] = df_final["AvgCost_of_Debt"] * 100
-    df_final["Market_Cap_B"] = df_final["Market_Cap"] / 1e9
+    return df_final
 
-    return (df_final,)
+
+
+
+
+
 
 
 @app.cell
 def _(df_final, mo):
     all_sectors = sorted(df_final["Sector_Key"].unique().tolist())
+
+
+
 
     sector_dropdown = mo.ui.multiselect(
         options=all_sectors,
@@ -60,15 +106,27 @@ def _(df_final, mo):
         label="Filter by Sector",
     )
 
+
+
+
     cap_slider = mo.ui.slider(
         start=0,
-        stop=200,
-        step=10,
+        stop=3000,
+        step=100,
         value=0,
         label="Min Market Cap ($ Billions)",
     )
 
+
+
+
     return cap_slider, sector_dropdown
+
+
+
+
+
+
 
 
 @app.cell
@@ -78,23 +136,28 @@ def _(cap_slider, df_final, sector_dropdown):
         & (df_final["Market_Cap_B"] >= cap_slider.value)
     ]
 
+
+
+
     count = len(filtered_portfolio)
     return count, filtered_portfolio
+
+
+
+
+
+
 
 
 @app.cell
 def _(count, filtered_portfolio, mo, np, pd, px):
     if count == 0:
-        empty_fig = px.scatter(
+        fig_portfolio = px.scatter(
             title="No data found for the selected filters. Adjust your selections."
         )
-        chart_element = mo.ui.plotly(empty_fig)
-
-        empty_stats = pd.DataFrame(
+        summary = pd.DataFrame(
             {"Message": ["No descriptive statistics available for the current filters."]}
         )
-        stats_table = mo.ui.table(empty_stats, label="Descriptive Statistics")
-
     else:
         fig_portfolio = px.scatter(
             filtered_portfolio,
@@ -113,60 +176,26 @@ def _(count, filtered_portfolio, mo, np, pd, px):
             height=600,
         )
 
-        fig_portfolio.add_vline(
-            x=1.81,
-            line_dash="dash",
-            line_color="red",
-            annotation=dict(
-                text="Distress Threshold (Z-Score = 1.81)",
-                font=dict(color="red"),
-                x=1.5,
-                xref="x",
-                y=1.07,
-                yref="paper",
-                showarrow=False,
-                yanchor="top",
-            ),
-        )
 
-        fig_portfolio.add_vline(
-            x=2.99,
-            line_dash="dash",
-            line_color="green",
-            annotation=dict(
-                text="Safe Threshold (Z-Score = 2.99)",
-                font=dict(color="green"),
-                x=3.10,
-                xref="x",
-                y=1.02,
-                yref="paper",
-                showarrow=False,
-                yanchor="top",
-            ),
-        )
+
+
+        fig_portfolio.add_vline(x=1.81, line_dash="dash", line_color="red")
+        fig_portfolio.add_vline(x=2.99, line_dash="dash", line_color="green")
+
+
+
 
         if len(filtered_portfolio) > 2:
             x = filtered_portfolio["Z_Score_lag"].astype(float)
             y = filtered_portfolio["Debt_Cost_Percent"].astype(float)
-
             slope, intercept = np.polyfit(x, y, 1)
             x_line = np.linspace(x.min(), x.max(), 100)
             y_line = intercept + slope * x_line
-            r2 = np.corrcoef(x, y)[0, 1] ** 2
-
             line_trace = px.line(x=x_line, y=y_line).data[0]
             fig_portfolio.add_trace(line_trace)
-            fig_portfolio.add_annotation(
-                text=f"Regression line – R² = {r2:.2f}",
-                xref="paper",
-                yref="paper",
-                x=0.02,
-                y=0.95,
-                showarrow=False,
-                font=dict(color="black"),
-            )
 
-        chart_element = mo.ui.plotly(fig_portfolio)
+
+
 
         summary = (
             filtered_portfolio[
@@ -176,58 +205,66 @@ def _(count, filtered_portfolio, mo, np, pd, px):
             .round(2)
             .reset_index()
         )
-        stats_table = mo.ui.table(summary, label="Descriptive Statistics")
 
-    travel_data = pd.DataFrame(
-        {
-            "City": ["London", "New York", "Tokyo", "Sydney", "Paris"],
-            "Lat": [51.5, 40.7, 35.6, -33.8, 48.8],
-            "Lon": [-0.1, -74.0, 139.6, 151.2, 2.3],
-            "Visit_Year_str": ["2022", "2023", "2024", "2021", "2023"],
-        }
-    )
 
-    years = sorted(travel_data["Visit_Year_str"].unique(), key=int)
 
-    fig_travel = px.scatter_geo(
-        travel_data,
-        lat="Lat",
-        lon="Lon",
-        hover_name="City",
-        color="Visit_Year_str",
-        category_orders={"Visit_Year_str": years},
-        color_discrete_sequence=px.colors.qualitative.Plotly,
-        projection="natural earth",
-        title="My Travel Footprint",
-        labels={"Visit_Year_str": "Visit Year"},
-    )
 
-    fig_travel.update_traces(marker=dict(size=12))
+    chart_element = mo.ui.plotly(fig_portfolio)
+    stats_table = mo.ui.table(summary, label="Descriptive Statistics")
+    return chart_element, stats_table
 
-    return chart_element, fig_travel, stats_table
+
+
+
+
+
+
+
+
 
 
 @app.cell
-def _(cap_slider, chart_element, fig_travel, mo, sector_dropdown, stats_table):
+def _(mo):
     tab_cv = mo.md(
         """
 ### 👋 About Me
 
 **Name:** Malachi Olagbaju  
-**Course:** BSc Accounting & Finance (2025 – Present), Bayes Business School
+**Course:** BSc Accounting & Finance (2025 – Present), Bayes Business School  
 
 **Summary:**  
 I am a first year accounting and finance student fascinated by how data analytics, AI, and financial systems interact in real-world decision-making.
 
 **Core Skills:**  
-- 🐍 Python Programming (pandas, plotly, marimo)  
+- 🐍 Python Programming  
 - 📊 Financial Model Design  
 - 🧠 Analytical and Critical Thinking  
-- 🗂️ Data Visualisation & Storytelling  
-- 💼 Business Reporting & Presentation
+- 🗂️ Data Visualisation and Storytelling  
+- 💼 Business Reporting and Presentation
 """
     )
 
+    tab_personal = mo.md(
+        """
+## 🌍 Personal Interests
+
+Outside of academics, I enjoy travelling and exploring new places.
+
+Some cities I have visited include:
+- Tenerife (2021)
+- Budapest (2022)
+- Paris (2023)
+- Dallas (2024)
+
+These experiences reflect my interest in global cultures, international environments, and learning from different places.
+"""
+    )
+
+    return tab_cv, tab_personal
+
+
+@app.cell
+def _(cap_slider, chart_element, mo, sector_dropdown, stats_table, tab_cv, tab_personal):
     tab_data_content = mo.vstack(
         [
             mo.md(
@@ -236,7 +273,7 @@ I am a first year accounting and finance student fascinated by how data analytic
 
 This project explores the relationship between company risk and borrowing costs.
 
-Using real financial data, I:
+Using sample company data, I:
 - Analysed company credit risk using the Altman Z-score
 - Compared risk against cost of debt
 - Built an interactive dashboard using Python and Plotly
@@ -254,26 +291,6 @@ Using real financial data, I:
         ]
     )
 
-    tab_personal = mo.vstack(
-        [
-            mo.md(
-                """
-## 🌍 Personal Interests
-
-Outside of academics, I enjoy travelling and exploring new places.
-
-On the map I have highlighted some of the cities that I have visited, showing my interest in global cultures and experiences.
-"""
-            ),
-            mo.ui.plotly(fig_travel),
-        ]
-    )
-
-    return tab_cv, tab_data_content, tab_personal
-
-
-@app.cell
-def _(mo, tab_cv, tab_data_content, tab_personal):
     app_tabs = mo.ui.tabs(
         {
             "📄 About Me": tab_cv,
@@ -283,9 +300,7 @@ def _(mo, tab_cv, tab_data_content, tab_personal):
     )
 
     deployment_note = mo.callout(
-        mo.md(
-            "**Deployment:** Exported using `marimo export html-wasm` and hosted on GitHub Pages."
-        ),
+        mo.md("**Deployment:** Exported using `marimo export html-wasm` and hosted on GitHub Pages."),
         kind="success",
     )
 
@@ -296,7 +311,12 @@ def _(mo, tab_cv, tab_data_content, tab_personal):
             app_tabs,
         ]
     )
-    return
+
+
+
+
+
+
 
 
 if __name__ == "__main__":
