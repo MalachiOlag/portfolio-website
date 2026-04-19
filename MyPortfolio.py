@@ -220,20 +220,26 @@ def _(count, filtered_portfolio, mo, np, pd, px):
 
 
 
-
-
-
 @app.cell
 def _(mo):
     tab_cv = mo.md(
         """
 ### 👋 About Me
 
+
+
+
 **Name:** Malachi Olagbaju  
 **Course:** BSc Accounting & Finance (2025 – Present), Bayes Business School  
 
+
+
+
 **Summary:**  
 I am a first year accounting and finance student fascinated by how data analytics, AI, and financial systems interact in real-world decision-making.
+
+
+
 
 **Core Skills:**  
 - 🐍 Python Programming  
@@ -244,27 +250,45 @@ I am a first year accounting and finance student fascinated by how data analytic
 """
     )
 
+
+
+
     tab_personal = mo.md(
-        """
+    """
 ## 🌍 Personal Interests
 
-Outside of academics, I enjoy travelling and exploring new places.
+Outside of academics, I enjoy travelling and exploring new places, which has helped me develop a broader global perspective.
 
-Some cities I have visited include:
-- Tenerife (2021)
-- Budapest (2022)
-- Paris (2023)
-- Dallas (2024)
+Some of the cities I have visited include:
+- 🇪🇸 Tenerife (2021)
+- 🇭🇺 Budapest (2022)
+- 🇫🇷 Paris (2023)
+- 🇺🇸 Dallas (2024)
 
-These experiences reflect my interest in global cultures, international environments, and learning from different places.
+Through these experiences, I have developed a strong interest in:
+- 🌐 Global business environments  
+- 📊 Understanding economic differences between countries  
+- 🧠 Applying analytical thinking to real-world situations  
+
+These interests complement my academic studies in Accounting & Finance, particularly in areas such as financial analysis, international markets, and data-driven decision making.
 """
-    )
+)
+
+
+
 
     return tab_cv, tab_personal
 
 
+
+
+
+
+
+
 @app.cell
 def _(cap_slider, chart_element, mo, sector_dropdown, stats_table, tab_cv, tab_personal):
+
     tab_data_content = mo.vstack(
         [
             mo.md(
@@ -299,17 +323,14 @@ Using sample company data, I:
         }
     )
 
-    deployment_note = mo.callout(
-        mo.md("**Deployment:** Exported using `marimo export html-wasm` and hosted on GitHub Pages."),
-        kind="success",
-    )
-
-    mo.vstack(
-        [
-            mo.md("# **Malachi Olagbaju**"),
-            deployment_note,
-            app_tabs,
-        ]
+    # 🔴 THIS LINE IS THE KEY FIX
+    mo.output.replace(
+        mo.vstack(
+            [
+                mo.md("# **Malachi Olagbaju**"),
+                app_tabs,
+            ]
+        )
     )
 
 
